@@ -243,16 +243,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun onNotificationsReady() {
         connected = true
-        authed = true  // Kein Auth nÃ¶tig â€” Roller akzeptiert Befehle direkt
-        runOnUiThread {
-            setStatus("Verbunden âœ“")
-            btnConnect.text = "Trennen"
-            setFeatureButtonsEnabled(true)
-        }
-        log("Verbunden âœ“ â€” bereit fÃ¼r Befehle")
+        runOnUiThread { setStatus("Verbunden â€” warte auf Auth..."); btnConnect.text = "Trennen" }
+        log("Verbunden âœ“ â€” warte auf Challenge vom Roller...")
+        // Roller sendet Challenge automatisch nach dem Verbinden
+        // Wir reagieren in onDataReceived wenn cmd=0x30 kommt
         lifecycleScope.launch {
-            delay(500)
-            readParams()
+            delay(8000) // Warte 8 Sekunden auf Auth
+            if (!authed) {
+                log("Kein Auth nÃ¶tig â€” sende direkt Befehle")
+                authed = true
+                runOnUiThread { setStatus("Verbunden âœ“"); setFeatureButtonsEnabled(true) }
+                readParams()
+            }
         }
     }
 
@@ -278,9 +280,37 @@ class MainActivity : AppCompatActivity() {
             if (rxBuffer.size < needed) break
             val frame  = rxBuffer.subList(0, needed).toByteArray()
             repeat(needed) { rxBuffer.removeAt(0) }
+            val cmd    = frame[3]
             val parsed = frame.copyOfRange(5, 5 + len)
+
+            // Auto-handle Auth Challenge (0x30) vom Roller
+            if (cmd == CMD_AUTH_INIT && parsed.size >= 16 && !authed) {
+                log("Challenge empfangen â†’ antworte...")
+                lifecycleScope.launch { handleAuthChallenge(parsed) }
+                continue
+            }
+
             pendingResponse?.complete(parsed)
             pendingResponse = null
+        }
+    }
+
+    private suspend fun handleAuthChallenge(challenge: ByteArray) {
+        try {
+            val prefs  = getSharedPreferences("navee", Context.MODE_PRIVATE)
+            val userId = prefs.getString("userId", "0")?.toLongOrNull() ?: 0L
+            val keyIdx = challenge[0].toInt() and 0xFF  // Roller schickt keyIdx
+            val actualKey = if (keyIdx < AES_KEYS.size) keyIdx else 0
+            val response = aesEncrypt(challenge.copyOf(16), AES_KEYS[actualKey])
+            sendFrame(buildFrame(CMD_AUTH_RESP, response))
+            log("Auth-Response gesendet (key=$actualKey)")
+            delay(500)
+            authed = true
+            log("Authentifiziert âœ“")
+            runOnUiThread { setStatus("Verbunden âœ“"); setFeatureButtonsEnabled(true) }
+            readParams()
+        } catch (e: Exception) {
+            log("Auth-Challenge Fehler: ${e.message}")
         }
     }
 
