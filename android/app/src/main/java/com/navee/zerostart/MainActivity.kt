@@ -105,7 +105,7 @@ class MainActivity : AppCompatActivity() {
     private fun hasPermission(p: String) =
         ContextCompat.checkSelfPermission(this, p) == PackageManager.PERMISSION_GRANTED
 
-    // ── Connect ──────────────────────────────────────────────
+    // â”€â”€ Connect â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private fun connect() {
         val userId = inputUserId.text.toString().trim()
         if (userId.isEmpty() || userId.toLongOrNull() == null) { log("Fehler: Navee ID eingeben!"); return }
@@ -174,13 +174,13 @@ class MainActivity : AppCompatActivity() {
         log("Getrennt")
     }
 
-    // ── GATT Callback ────────────────────────────────────────
+    // â”€â”€ GATT Callback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private val gattCallback = object : BluetoothGattCallback() {
 
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 bluetoothGatt = gatt
-                log("GATT verbunden ✓ — entdecke Services...")
+                log("GATT verbunden âœ“ â€” entdecke Services...")
                 Thread.sleep(600)
                 gatt.discoverServices()
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
@@ -208,7 +208,7 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
-            log("Services gefunden ✓")
+            log("Services gefunden âœ“")
             gatt.setCharacteristicNotification(notifyChr, true)
 
             val desc = notifyChr!!.getDescriptor(CCCD_UUID)
@@ -227,7 +227,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
-            log("Notifications aktiviert (status=$status) ✓")
+            log("Notifications aktiviert (status=$status) âœ“")
             onNotificationsReady()
         }
 
@@ -243,14 +243,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun onNotificationsReady() {
         connected = true
-        runOnUiThread { setStatus("Verbunden — Auth..."); btnConnect.text = "Trennen" }
+        runOnUiThread { setStatus("Verbunden â€” Auth..."); btnConnect.text = "Trennen" }
         lifecycleScope.launch {
             try {
                 val userId = getSharedPreferences("navee", Context.MODE_PRIVATE).getString("userId", "") ?: ""
                 authenticate(userId.toLong())
                 authed = true
-                log("Authentifiziert ✓")
-                runOnUiThread { setStatus("Verbunden ✓"); setFeatureButtonsEnabled(true) }
+                log("Authentifiziert âœ“")
+                runOnUiThread { setStatus("Verbunden âœ“"); setFeatureButtonsEnabled(true) }
                 readParams()
             } catch (e: Exception) {
                 log("Auth Fehler: ${e.message}")
@@ -259,7 +259,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── Frame Protokoll ──────────────────────────────────────
+    // â”€â”€ Frame Protokoll â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private fun buildFrame(cmd: Byte, data: ByteArray = byteArrayOf()): ByteArray {
         val body = byteArrayOf(0x00, cmd, data.size.toByte()) + data
         val cs   = body.fold(0) { acc, b -> (acc + (b.toInt() and 0xFF)) and 0xFF }.toByte()
@@ -315,35 +315,48 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── AES-128 ECB ──────────────────────────────────────────
+    // â”€â”€ AES-128 ECB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private fun aesEncrypt(data: ByteArray, key: ByteArray): ByteArray {
         val cipher = Cipher.getInstance("AES/ECB/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"))
         return cipher.doFinal(data)
     }
 
-    // ── Auth ─────────────────────────────────────────────────
-    private suspend fun authenticate(userId: Long) {
-        val keyIdx   = (0..4).random()
-        val uid      = byteArrayOf(
-            ((userId shr 24) and 0xFF).toByte(),
-            ((userId shr 16) and 0xFF).toByte(),
-            ((userId shr 8)  and 0xFF).toByte(),
-            (userId          and 0xFF).toByte()
+    // â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Protokoll: [keyIdx, shareFlag=0, s6(userId)=6 bytes BE, 0x00] = 9 bytes payload
+    private fun s6(userId: Long): ByteArray {
+        val v = userId and 0xFFFFFFFFFFFFL
+        return byteArrayOf(
+            ((v shr 40) and 0xFF).toByte(),
+            ((v shr 32) and 0xFF).toByte(),
+            ((v shr 24) and 0xFF).toByte(),
+            ((v shr 16) and 0xFF).toByte(),
+            ((v shr  8) and 0xFF).toByte(),
+            (v          and 0xFF).toByte()
         )
-        log("Auth-Init mit Key $keyIdx...")
-        val challenge = sendAndReceive(CMD_AUTH_INIT, byteArrayOf(keyIdx.toByte()) + uid + byteArrayOf(0x00))
-        if (challenge.size < 16) throw Exception("Ungültige Challenge")
-        val response  = aesEncrypt(challenge.copyOf(16), AES_KEYS[keyIdx])
-        val authReply = sendAndReceive(CMD_AUTH_RESP, response)
-        val code      = if (authReply.isNotEmpty()) authReply[0].toInt() and 0xFF else -1
-        if (code != 0) {
-            if (code == 255) throw Exception("Falsche Navee ID (Error 255)")
-            throw Exception("Auth fehlgeschlagen (code $code)")
-        }
     }
 
-    // ── Parameter lesen ──────────────────────────────────────
+    private suspend fun authenticate(userId: Long) {
+        val keyIdx   = (0..4).random()
+        val initData = byteArrayOf(keyIdx.toByte(), 0x00) + s6(userId) + byteArrayOf(0x00)
+        log("Auth-Init mit Key $keyIdx (6-byte userId)...")
+        val challenge = sendAndReceive(CMD_AUTH_INIT, initData, 5000)
+        if (challenge.isEmpty()) throw Exception("Keine Antwort")
+        val errCode = challenge[0].toInt() and 0xFF
+        if (errCode == 255) throw Exception("Falsche Navee ID (Error 255)")
+        if (challenge.size < 16) throw Exception("Challenge zu kurz (${challenge.size} bytes)")
+        log("Challenge empfangen, verschlÃ¼ssele...")
+        val response  = aesEncrypt(challenge.copyOf(16), AES_KEYS[keyIdx])
+        val authReply = sendAndReceive(CMD_AUTH_RESP, response, 5000)
+        val code      = if (authReply.isNotEmpty()) authReply[0].toInt() and 0xFF else -1
+        if (code == 255) throw Exception("Auth abgelehnt (code 255)")
+        log("Auth erfolgreich (code=$code)")
+        // Phase 2: nochmal 0x30 senden wie die offizielle App
+        delay(200)
+        sendFrame(buildFrame(CMD_AUTH_INIT, initData))
+    }
+
+    // â”€â”€ Parameter lesen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private suspend fun readParams() {
         try {
             val data = sendAndReceive(CMD_READ_PARAMS, timeoutMs = 3000)
@@ -358,12 +371,12 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) { log("Params: ${e.message}") }
     }
 
-    // ── Toggles ──────────────────────────────────────────────
+    // â”€â”€ Toggles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private suspend fun toggleZeroStart() {
         val newVal: Byte = if (zeroStartEnabled) 3 else 0
         sendFrame(buildFrame(CMD_START_SPEED, byteArrayOf(newVal)))
         zeroStartEnabled = !zeroStartEnabled
-        log("Zero Start " + if (zeroStartEnabled) "AN ✓" else "AUS")
+        log("Zero Start " + if (zeroStartEnabled) "AN âœ“" else "AUS")
         runOnUiThread { updateButtonStates() }
     }
 
@@ -379,11 +392,11 @@ class MainActivity : AppCompatActivity() {
         val newVal: Byte = if (lockEnabled) 0 else 1
         sendFrame(buildFrame(CMD_LOCK, byteArrayOf(newVal)))
         lockEnabled = !lockEnabled
-        log("Wegfahrsperre " + if (lockEnabled) "GESPERRT 🔒" else "ENTSPERRT 🔓")
+        log("Wegfahrsperre " + if (lockEnabled) "GESPERRT ðŸ”’" else "ENTSPERRT ðŸ”“")
         runOnUiThread { updateButtonStates() }
     }
 
-    // ── UI ───────────────────────────────────────────────────
+    // â”€â”€ UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private fun setStatus(text: String) = runOnUiThread { tvStatus.text = text }
 
     private fun setFeatureButtonsEnabled(enabled: Boolean) = runOnUiThread {
@@ -393,9 +406,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateButtonStates() {
-        btnZeroStart.text = if (zeroStartEnabled) "🚀 Zero Start: AN"  else "🚀 Zero Start: AUS"
-        btnCruise.text    = if (cruiseEnabled)    "🎯 Tempomat: AN"    else "🎯 Tempomat: AUS"
-        btnLock.text      = if (lockEnabled)      "🔒 Gesperrt"        else "🔓 Entsperrt"
+        btnZeroStart.text = if (zeroStartEnabled) "ðŸš€ Zero Start: AN"  else "ðŸš€ Zero Start: AUS"
+        btnCruise.text    = if (cruiseEnabled)    "ðŸŽ¯ Tempomat: AN"    else "ðŸŽ¯ Tempomat: AUS"
+        btnLock.text      = if (lockEnabled)      "ðŸ”’ Gesperrt"        else "ðŸ”“ Entsperrt"
     }
 
     private fun log(msg: String) = runOnUiThread {
