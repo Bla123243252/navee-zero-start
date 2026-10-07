@@ -13,12 +13,8 @@
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
     <application
-        android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="Navee Zero Start"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.NaveeZeroStart">
+android:roundIcon="@mipmap/ic_launcher_round"
         <activity
             android:name=".MainActivity"
             android:exported="true">
