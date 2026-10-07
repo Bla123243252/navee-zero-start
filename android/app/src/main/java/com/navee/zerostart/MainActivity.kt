@@ -243,19 +243,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun onNotificationsReady() {
         connected = true
-        runOnUiThread { setStatus("Verbunden â€” Auth..."); btnConnect.text = "Trennen" }
+        authed = true  // Kein Auth nÃ¶tig â€” Roller akzeptiert Befehle direkt
+        runOnUiThread {
+            setStatus("Verbunden âœ“")
+            btnConnect.text = "Trennen"
+            setFeatureButtonsEnabled(true)
+        }
+        log("Verbunden âœ“ â€” bereit fÃ¼r Befehle")
         lifecycleScope.launch {
-            try {
-                val userId = getSharedPreferences("navee", Context.MODE_PRIVATE).getString("userId", "") ?: ""
-                authenticate(userId.toLong())
-                authed = true
-                log("Authentifiziert âœ“")
-                runOnUiThread { setStatus("Verbunden âœ“"); setFeatureButtonsEnabled(true) }
-                readParams()
-            } catch (e: Exception) {
-                log("Auth Fehler: ${e.message}")
-                runOnUiThread { setStatus("Auth fehlgeschlagen") }
-            }
+            delay(500)
+            readParams()
         }
     }
 
