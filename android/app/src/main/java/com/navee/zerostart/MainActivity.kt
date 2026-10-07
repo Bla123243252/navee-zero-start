@@ -339,21 +339,40 @@ class MainActivity : AppCompatActivity() {
     private suspend fun authenticate(userId: Long) {
         val keyIdx   = (0..4).random()
         val initData = byteArrayOf(keyIdx.toByte(), 0x00) + s6(userId) + byteArrayOf(0x00)
-        log("Auth-Init mit Key $keyIdx (6-byte userId)...")
-        val challenge = sendAndReceive(CMD_AUTH_INIT, initData, 5000)
-        if (challenge.isEmpty()) throw Exception("Keine Antwort")
+        log("Auth-Init mit Key $keyIdx...")
+        // Sende Auth-Init und warte auf Challenge vom Roller
+        sendFrame(buildFrame(CMD_AUTH_INIT, initData))
+        // Roller schickt Challenge als 0x30 Response
+        val challenge = withTimeout(5000) {
+            var result: ByteArray? = null
+            while (result == null) {
+                delay(50)
+                synchronized(rxBuffer) {
+                    // Suche nach 0x30 Frame mit 16 Bytes Challenge
+                    val buf = rxBuffer.toByteArray()
+                    for (i in buf.indices) {
+                        if (i + 5 < buf.size && buf[i] == 0x55.toByte() && buf[i+1] == 0xAA.toByte() && buf[i+3] == CMD_AUTH_INIT) {
+                            val len = buf[i+4].toInt() and 0xFF
+                            if (len >= 16 && i + 5 + len < buf.size) {
+                                result = buf.copyOfRange(i+5, i+5+len)
+                                rxBuffer.clear()
+                            }
+                            break
+                        }
+                    }
+                }
+            }
+            result!!
+        }
         val errCode = challenge[0].toInt() and 0xFF
         if (errCode == 255) throw Exception("Falsche Navee ID (Error 255)")
-        if (challenge.size < 16) throw Exception("Challenge zu kurz (${challenge.size} bytes)")
-        log("Challenge empfangen, verschlÃ¼ssele...")
+        if (challenge.size < 16) throw Exception("Challenge zu kurz")
+        log("Challenge empfangen âœ“")
         val response  = aesEncrypt(challenge.copyOf(16), AES_KEYS[keyIdx])
-        val authReply = sendAndReceive(CMD_AUTH_RESP, response, 5000)
-        val code      = if (authReply.isNotEmpty()) authReply[0].toInt() and 0xFF else -1
-        if (code == 255) throw Exception("Auth abgelehnt (code 255)")
-        log("Auth erfolgreich (code=$code)")
-        // Phase 2: nochmal 0x30 senden wie die offizielle App
-        delay(200)
-        sendFrame(buildFrame(CMD_AUTH_INIT, initData))
+        sendFrame(buildFrame(CMD_AUTH_RESP, response))
+        // Warte auf Auth-Response (0x31)
+        delay(500)
+        log("Auth gesendet âœ“")
     }
 
     // â”€â”€ Parameter lesen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
