@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#0C0C0E"
+    android:padding="16dp">
+
+    <!-- Header -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="⚡ Navee Zero Start"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingTop="16dp"
+        android:paddingBottom="4dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="BLE Direktsteuerung · S60E"
+        android:textColor="#666680"
+        android:textSize="13sp"
+        android:gravity="center"
+        android:paddingBottom="20dp"/>
+
+    <!-- Navee ID Eingabe -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="NAVEE ID"
+        android:textColor="#666680"
+        android:textSize="11sp"
+        android:letterSpacing="0.1"
+        android:paddingBottom="6dp"/>
+
+    <EditText
+        android:id="@+id/inputUserId"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:hint="z.B. 1276260047587"
+        android:hintTextColor="#333355"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:background="@drawable/input_bg"
+        android:inputType="number"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingTop="0dp"
+        android:paddingBottom="0dp"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Status -->
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nicht verbunden"
+        android:textColor="#CCCCDD"
+        android:textSize="15sp"
+        android:gravity="center"
+        android:padding="12dp"
+        android:background="@drawable/card_bg"
+        android:layout_marginBottom="12dp"/>
+
+    <!-- Verbinden Button -->
+    <Button
+        android:id="@+id/btnConnect"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="📡 Verbinden"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:backgroundTint="#7C3AED"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- Feature Buttons -->
+    <Button
+        android:id="@+id/btnZeroStart"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="🚀 Zero Start: AUS"
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:backgroundTint="#3B82F6"
+        android:enabled="false"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnCruise"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="🎯 Tempomat: AUS"
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:backgroundTint="#1D4ED8"
+        android:enabled="false"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnLock"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="🔓 Entsperrt"
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:backgroundTint="#374151"
+        android:enabled="false"
+        android:layout_marginBottom="12dp"/>
+
+    <!-- Log -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="LOG"
+        android:textColor="#666680"
+        android:textSize="11sp"
+        android:letterSpacing="0.1"
+        android:paddingBottom="6dp"/>
+
+    <ScrollView
+        android:id="@+id/scrollLog"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@drawable/card_bg">
+
+        <TextView
+            android:id="@+id/tvLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#4488AA"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:padding="10dp"
+            android:lineSpacingMultiplier="1.5"/>
+    </ScrollView>
+
+</LinearLayout>
