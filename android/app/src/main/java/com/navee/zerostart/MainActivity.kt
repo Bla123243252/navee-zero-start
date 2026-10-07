@@ -243,17 +243,30 @@ class MainActivity : AppCompatActivity() {
 
     private fun onNotificationsReady() {
         connected = true
-        runOnUiThread { setStatus("Verbunden â€” warte auf Auth..."); btnConnect.text = "Trennen" }
-        log("Verbunden âœ“ â€” warte auf Challenge vom Roller...")
-        // Roller sendet Challenge automatisch nach dem Verbinden
-        // Wir reagieren in onDataReceived wenn cmd=0x30 kommt
+        runOnUiThread { setStatus("Verbunden â€” Auth..."); btnConnect.text = "Trennen" }
         lifecycleScope.launch {
-            delay(8000) // Warte 8 Sekunden auf Auth
-            if (!authed) {
-                log("Kein Auth nÃ¶tig â€” sende direkt Befehle")
-                authed = true
-                runOnUiThread { setStatus("Verbunden âœ“"); setFeatureButtonsEnabled(true) }
-                readParams()
+            try {
+                val prefs  = getSharedPreferences("navee", Context.MODE_PRIVATE)
+                val userId = prefs.getString("userId", "0")?.toLongOrNull() ?: 0L
+                val keyIdx = (0..4).random()
+                val initData = byteArrayOf(keyIdx.toByte(), 0x00) + s6(userId) + byteArrayOf(0x00)
+                log("Sende Auth-Init (key=$keyIdx)...")
+                sendFrame(buildFrame(CMD_AUTH_INIT, initData))
+                // Challenge kommt als Notification â€” handleAuthChallenge wird aufgerufen
+                // Warte bis authed oder timeout
+                var waited = 0
+                while (!authed && waited < 6000) {
+                    delay(100)
+                    waited += 100
+                }
+                if (!authed) {
+                    log("Kein Auth â€” versuche ohne Auth...")
+                    authed = true
+                    runOnUiThread { setStatus("Verbunden âœ“"); setFeatureButtonsEnabled(true) }
+                    readParams()
+                }
+            } catch (e: Exception) {
+                log("Fehler: ${e.message}")
             }
         }
     }
