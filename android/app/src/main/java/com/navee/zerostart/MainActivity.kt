@@ -180,13 +180,19 @@ class MainActivity : AppCompatActivity() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 bluetoothGatt = gatt
-                log("GATT verbunden âœ“ â€” entdecke Services...")
-                Thread.sleep(600)
-                gatt.discoverServices()
+                log("GATT verbunden âœ“")
+                // MTU auf 247 setzen wie die navee-flasher App
+                gatt.requestMtu(247)
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 log("Verbindung getrennt (status=$status)")
                 runOnUiThread { disconnect() }
             }
+        }
+
+        override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
+            log("MTU=$mtu âœ“ â€” entdecke Services...")
+            Thread.sleep(300)
+            gatt.discoverServices()
         }
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
@@ -248,7 +254,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 val prefs  = getSharedPreferences("navee", Context.MODE_PRIVATE)
                 val userId = prefs.getString("userId", "0")?.toLongOrNull() ?: 0L
-                val keyIdx = (0..4).random()
+                val keyIdx = 2 // navee-flasher verwendet Key 2
                 val initData = byteArrayOf(keyIdx.toByte(), 0x00) + s6(userId) + byteArrayOf(0x00)
                 log("Sende Auth-Init (key=$keyIdx)...")
                 sendFrame(buildFrame(CMD_AUTH_INIT, initData))
